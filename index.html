@@ -1,0 +1,704 @@
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Laboratorio de IA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: barra fija con pestañas (una por actividad + resumen). Cada actividad apila: la idea, la práctica interactiva, preguntas y notas para el docente. */
+:root{
+  --ink:#0B2545; --ink-2:#1B3C6B; --paper:#E8F0F6; --panel:#FFFFFF; --line:#C5D3E0; --dot:#CBD9E6; --muted:#4A6178;
+  --robot:#D9480F; --robot-dk:#A93608; --robot-soft:#FFE6DA;
+  --signal:#0A7F8C; --signal-soft:#D6F2F4; --sun:#FFC933;
+  --ok:#16794A; --ok-soft:#D9F2E3; --bad:#B8283A; --bad-soft:#FBDDE1;
+  --c-a:#D9480F; --c-b:#1B6FB5; --c-c:#7B4BB7; --c-d:#9A7400; --c-e:#2E7D32; --c-f:#C2185B;
+  --f-display:'Chakra Petch',system-ui,sans-serif; --f-body:'Atkinson Hyperlegible',system-ui,sans-serif; --f-mono:'JetBrains Mono',ui-monospace,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--paper);background-image:radial-gradient(var(--dot) 1.2px,transparent 1.4px);background-size:22px 22px;color:var(--ink);font:400 17px/1.5 var(--f-body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--ink);z-index:30}
+h1,h2,h3{font-family:var(--f-display);line-height:1.15;margin:0;text-wrap:balance}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--ink);color:#fff;border-bottom:4px solid var(--sun)}
+.top-in{max-width:1100px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font:700 20px var(--f-display);letter-spacing:.02em}
+.led{width:12px;height:12px;border-radius:50%;background:#4ADE80;box-shadow:0 0 0 3px rgba(74,222,128,.25)}
+.top .sub{font-size:14px;color:#A9C0DA}
+.tabs{max-width:1100px;margin:0 auto;padding:8px max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px));display:flex;gap:6px;overflow-x:auto}
+.tab{flex:none;border:0;background:var(--ink-2);color:#DCE8F5;font:700 14px var(--f-display);letter-spacing:.03em;padding:9px 14px;border-radius:10px 10px 0 0;cursor:pointer;display:flex;gap:8px;align-items:center;white-space:nowrap}
+.tab:hover{background:#25497F}
+.tab.on{background:var(--paper);color:var(--ink)}
+.tab i{width:10px;height:10px;border-radius:50%;border:2px solid #7F9BBB;display:block}
+.tab.done i{background:#4ADE80;border-color:#4ADE80}
+
+.app{max-width:1100px;margin:0 auto;padding-block:22px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.lab{display:grid;gap:18px}
+.lab-head{display:grid;gap:8px;justify-items:start}
+.lab-head h1{font-size:clamp(28px,5vw,44px)}
+.panel{background:var(--panel);border:2px solid var(--ink);border-radius:14px;padding:20px;display:grid;gap:14px;min-width:0}
+.eyebrow{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--robot)}
+.chip{display:inline-block;font:700 12px var(--f-display);letter-spacing:.1em;text-transform:uppercase;background:var(--signal-soft);color:var(--signal);padding:4px 10px;border-radius:999px}
+.idea p+p{margin-top:8px}
+.words{display:flex;gap:8px;flex-wrap:wrap}
+.words span{background:var(--paper);border:1.5px solid var(--line);border-radius:8px;padding:4px 10px;font-size:15px}
+.words b{font-family:var(--f-display)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--ink);background:var(--panel);color:var(--ink);border-radius:10px;padding:9px 16px;font:700 16px var(--f-body);cursor:pointer;box-shadow:0 4px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+.btn:hover{transform:translateY(1px);box-shadow:0 3px 0 var(--ink)}
+.btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--ink)}
+.btn.primary{background:var(--robot);border-color:var(--robot-dk);color:#fff;box-shadow:0 4px 0 var(--robot-dk)}
+.btn.primary:hover{box-shadow:0 3px 0 var(--robot-dk)} .btn.primary:active{box-shadow:0 0 0 var(--robot-dk)}
+.btn.small{padding:6px 12px;font-size:14px;box-shadow:0 3px 0 var(--ink)}
+.btn.ghost{background:transparent;box-shadow:none;border-color:var(--line)}
+.btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:2px solid var(--ink);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:#fff;padding:7px 13px;font-weight:700;cursor:pointer}
+.seg button+button{border-left:2px solid var(--ink)}
+.seg button.on{background:var(--ink);color:#fff}
+.field{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:700}
+.note{border-radius:10px;padding:12px 14px;font-weight:700}
+.note.ok{background:var(--ok-soft);color:var(--ok)} .note.bad{background:var(--bad-soft);color:var(--bad)} .note.info{background:var(--signal-soft);color:var(--signal)}
+.note p+p{margin-top:6px;font-weight:400;color:var(--ink)}
+.section-title{font:700 13px var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:18px;align-items:start}
+.side{display:grid;gap:12px;align-content:start}
+.stat{background:var(--paper);border-radius:10px;padding:10px 14px}
+.stat b{display:block;font:700 30px var(--f-mono);font-variant-numeric:tabular-nums}
+.stat small{color:var(--muted)}
+.plot{background:#fff;border:2px solid var(--line);border-radius:12px;overflow:hidden}
+.plot svg{display:block;width:100%;height:auto;touch-action:manipulation}
+.plot text{font-family:var(--f-body);fill:var(--muted);font-size:12px}
+.plot .ttl{font-weight:700;fill:var(--ink);font-size:13px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.legend i{display:inline-block;width:14px;height:14px}
+.legend .ci{border-radius:50%} .legend .sq{border-radius:2px}
+.card-ex{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:center;background:var(--paper);border-radius:12px;padding:12px}
+.card-ex .em{font-size:52px;line-height:1;grid-row:span 2}
+.card-ex .m{font:500 15px var(--f-mono)}
+.bigact{display:flex;gap:10px;flex-wrap:wrap}
+.bigact .btn{flex:1;min-width:110px}
+
+/* Preguntas */
+.qq{display:grid;gap:10px}
+.qq+.qq{border-top:2px dashed var(--line);padding-top:14px}
+.qq h3{font-size:18px}
+.opts{display:grid;gap:8px}
+.opt{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;text-align:left;background:#fff;border:2px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.opt:hover{border-color:var(--ink)}
+.opt .k{width:30px;height:30px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font:700 15px var(--f-display)}
+.opt.good{border-color:var(--ok);background:var(--ok-soft)} .opt.nogood{border-color:var(--bad);background:var(--bad-soft)}
+details.teacher summary{cursor:pointer;font:700 16px var(--f-display);letter-spacing:.04em}
+details.teacher[open] summary{margin-bottom:10px}
+details.teacher h4{margin:12px 0 4px;font:700 14px var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--signal)}
+details.teacher ul{margin:0;padding-left:20px;display:grid;gap:4px}
+
+/* Resumen */
+.cmp{overflow-x:auto}
+table.cmp-t{border-collapse:collapse;width:100%;min-width:640px;font-size:15px}
+table.cmp-t th,table.cmp-t td{border-bottom:1.5px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+table.cmp-t th{font:700 13px var(--f-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.prog{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.prog div{display:flex;gap:8px;align-items:center;background:var(--paper);border-radius:10px;padding:8px 12px;font-weight:700}
+.prog div.done{background:var(--ok-soft);color:var(--ok)}
+
+/* Refuerzo */
+.world{display:grid;grid-template-columns:repeat(6,var(--cell));gap:4px;--cell:clamp(42px,13vw,62px);justify-content:center}
+.cell{width:var(--cell);height:var(--cell);border:2px solid var(--line);border-radius:8px;background:#F3F8FC;display:grid;place-items:center;font-size:calc(var(--cell)*.46);position:relative;padding:0;cursor:pointer;overflow:hidden}
+.cell .ar{position:absolute;right:3px;bottom:0;font:700 14px var(--f-display);color:var(--ink)}
+.cell.wall{background:var(--ink);border-color:var(--ink);cursor:default}
+.cell.goal{border-color:var(--ok);cursor:default} .cell.start{border-color:var(--ink-2);cursor:default}
+.cell .bot{position:absolute;inset:0;display:grid;place-items:center;font-size:calc(var(--cell)*.55)}
+
+/* Neurona */
+.rowline{display:grid;grid-template-columns:auto minmax(120px,1fr) 44px;gap:10px;align-items:center}
+.rowline input[type=range]{width:100%;accent-color:var(--robot);height:28px}
+.rowline output{font:700 18px var(--f-mono);text-align:right}
+.tog{border:2px solid var(--ink);border-radius:999px;background:#fff;padding:5px 14px;font-weight:700;cursor:pointer;min-width:74px}
+.tog.on{background:var(--sun)}
+table.tt{border-collapse:collapse;width:100%;font-size:15px}
+table.tt th,table.tt td{border-bottom:1.5px solid var(--line);padding:6px 8px;text-align:center}
+table.tt tr.cur td{background:var(--sun)}
+table.tt td.good{color:var(--ok);font-weight:700} table.tt td.bad{color:var(--bad);font-weight:700}
+
+/* Lenguaje */
+.sentence{font:500 22px/1.4 var(--f-display);min-height:64px;background:var(--paper);border-radius:12px;padding:14px 16px}
+.sentence .cur{display:inline-block;width:10px;height:1.1em;background:var(--robot);vertical-align:text-bottom;animation:blink 1s steps(2) infinite}
+.nexts{display:grid;gap:6px}
+.nx{display:grid;grid-template-columns:110px 1fr 48px;gap:10px;align-items:center;background:#fff;border:2px solid var(--line);border-radius:10px;padding:6px 10px;cursor:pointer;text-align:left}
+.nx:hover{border-color:var(--ink)}
+.nx .tr{height:14px;background:#E6EDF4;border-radius:999px;overflow:hidden}
+.nx .tr i{display:block;height:100%;background:var(--signal)}
+.nx b{font:700 14px var(--f-mono);text-align:right}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;z-index:60;font-weight:700;max-width:90vw;text-align:center}
+.toast[hidden]{display:none}
+@keyframes blink{50%{opacity:0}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:820px){
+  .two{grid-template-columns:1fr}
+  .nx{grid-template-columns:90px 1fr 44px}
+}
+</style>
+<header class="top">
+  <div class="top-in"><div class="brand"><span class="led"></span><span>Laboratorio de IA</span></div><span class="sub">Cómo aprenden las máquinas</span></div>
+  <nav class="tabs" id="nav" aria-label="Actividades"></nav>
+</header>
+<main class="app" id="app"></main>
+<div class="toast" id="toast" hidden></div>
+<script>
+'use strict';
+const STORE = 'robi-lab-v1';
+const $ = (s, r) => (r || document).querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function gauss(r) { let u = 0, v = 0; while (!u) u = r(); while (!v) v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+function shuffled(arr, seed) { const r = rng(seed), a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const fmt1 = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
+
+let S = { lab: 'sup', goal: {}, quiz: {} };
+function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
+function load() { try { const o = JSON.parse(localStorage.getItem(STORE) || 'null'); if (o && typeof o === 'object') S = Object.assign(S, o); } catch (e) {} }
+let toastT;
+function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2800); }
+
+const MOD = {};
+const LABS = [
+  { id: 'sup', tag: 'Supervisado',     title: 'Aprender con etiquetas' },
+  { id: 'uns', tag: 'No supervisado',  title: 'Agrupar sin etiquetas' },
+  { id: 'rl',  tag: 'Por refuerzo',    title: 'Aprender con premios y castigos' },
+  { id: 'nn',  tag: 'Red neuronal',    title: 'La neurona que decide' },
+  { id: 'lm',  tag: 'Lenguaje',        title: 'Predecir la próxima palabra' }
+];
+const ALL = LABS.map(l => l.id).concat('sum');
+let cleanup = null;
+
+/* ===== Preguntas ===== */
+function quizOf(id) { return id === 'sum' ? SUMQ : MOD[id].quiz; }
+function quizOk(id) { const st = S.quiz[id] || {}; return quizOf(id).every((q, i) => st[i] === q.a); }
+function isDone(id) { return id === 'sum' ? quizOk('sum') : !!S.goal[id] && quizOk(id); }
+function quizHtml(id) {
+  const st = S.quiz[id] || {};
+  return quizOf(id).map((q, i) => {
+    const c = st[i];
+    const opts = q.o.map((t, j) => '<button class="opt' + (c === j ? (j === q.a ? ' good' : ' nogood') : '') + '" data-quiz="' + id + '" data-q="' + i + '" data-o="' + j + '"><span class="k">' + 'ABC'[j] + '</span><span>' + esc(t) + '</span></button>').join('');
+    const fb = c === undefined ? '' : '<div class="note ' + (c === q.a ? 'ok' : 'bad') + '"><p>' + (c === q.a ? '¡Correcto!' : 'Todavía no.') + '</p><p>' + esc(c === q.a ? q.why : q.hint) + '</p></div>';
+    return '<div class="qq"><h3>' + (i + 1) + '. ' + esc(q.q) + '</h3><div class="opts">' + opts + '</div>' + fb + '</div>';
+  }).join('');
+}
+function markGoal(id) {
+  if (S.goal[id]) return;
+  S.goal[id] = true; save(); renderNav(); toast('¡Objetivo logrado! Ahora respondé las preguntas de abajo.');
+}
+
+/* ===== Navegación ===== */
+function renderNav() {
+  $('#nav').innerHTML = LABS.map(l => '<button class="tab' + (S.lab === l.id ? ' on' : '') + (isDone(l.id) ? ' done' : '') + '" data-tab="' + l.id + '"><i></i>' + esc(l.tag) + '</button>').join('') +
+    '<button class="tab' + (S.lab === 'sum' ? ' on' : '') + (isDone('sum') ? ' done' : '') + '" data-tab="sum"><i></i>Resumen</button>';
+}
+function go(id) {
+  if (cleanup) { cleanup(); cleanup = null; }
+  S.lab = id; save(); renderNav();
+  if (id === 'sum') renderSummary(); else renderLab(id);
+  window.scrollTo({ top: 0 });
+}
+function navButtons() {
+  const i = ALL.indexOf(S.lab);
+  return '<div class="actions">' + (i > 0 ? '<button class="btn" data-go="prev">← Anterior</button>' : '') + (i < ALL.length - 1 ? '<button class="btn primary" data-go="next">Siguiente →</button>' : '') + '</div>';
+}
+function renderLab(id) {
+  const L = LABS.find(x => x.id === id), M = MOD[id];
+  $('#app').innerHTML = '<section class="lab"><div class="lab-head"><span class="chip">' + esc(L.tag) + '</span><h1>' + esc(L.title) + '</h1></div>' +
+    '<div class="panel idea"><span class="eyebrow">La idea</span>' + M.idea + '</div>' +
+    '<div class="panel"><span class="eyebrow">Probá</span><div id="practice" style="display:grid;gap:14px"></div></div>' +
+    '<div class="panel"><span class="eyebrow">Para pensar</span><div id="quiz" style="display:grid;gap:14px">' + quizHtml(id) + '</div></div>' +
+    '<details class="panel teacher"><summary>Para el docente</summary>' + M.teacher + '</details>' + navButtons() + '</section>';
+  const stop = M.mount($('#practice'));
+  if (typeof stop === 'function') cleanup = stop;
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-tab]'); if (t) return go(t.dataset.tab);
+  const g = e.target.closest('[data-go]');
+  if (g) { const n = ALL.indexOf(S.lab) + (g.dataset.go === 'next' ? 1 : -1); if (ALL[n]) go(ALL[n]); return; }
+  const q = e.target.closest('[data-quiz]');
+  if (q) {
+    const id = q.dataset.quiz; (S.quiz[id] = S.quiz[id] || {})[q.dataset.q] = +q.dataset.o; save();
+    $('#quiz').innerHTML = quizHtml(id); renderNav();
+    const b = $('#quiz [data-q="' + q.dataset.q + '"][data-o="' + q.dataset.o + '"]'); if (b) b.focus({ preventScroll: true });
+  }
+});
+
+/* ===== Gráfico de dispersión (SVG) compartido por las actividades 1 y 2 ===== */
+function plotFrame(W, H, M, xr, yr, xt, yt, xl, yl) {
+  const sx = v => M.l + (v - xr[0]) / (xr[1] - xr[0]) * (W - M.l - M.r);
+  const sy = v => H - M.b - (v - yr[0]) / (yr[1] - yr[0]) * (H - M.t - M.b);
+  let s = '<rect x="' + M.l + '" y="' + M.t + '" width="' + (W - M.l - M.r) + '" height="' + (H - M.t - M.b) + '" fill="#FFFFFF" stroke="#C5D3E0"/>';
+  xt.forEach(v => { s += '<line x1="' + sx(v) + '" x2="' + sx(v) + '" y1="' + M.t + '" y2="' + (H - M.b) + '" stroke="#E6EDF4"/><text x="' + sx(v) + '" y="' + (H - M.b + 16) + '" text-anchor="middle">' + v + '</text>'; });
+  yt.forEach(v => { s += '<line y1="' + sy(v) + '" y2="' + sy(v) + '" x1="' + M.l + '" x2="' + (W - M.r) + '" stroke="#E6EDF4"/><text x="' + (M.l - 6) + '" y="' + (sy(v) + 4) + '" text-anchor="end">' + v + '</text>'; });
+  s += '<text class="ttl" x="' + (M.l + (W - M.l - M.r) / 2) + '" y="' + (H - 6) + '" text-anchor="middle">' + xl + '</text>';
+  s += '<text class="ttl" transform="translate(14 ' + (M.t + (H - M.t - M.b) / 2) + ') rotate(-90)" text-anchor="middle">' + yl + '</text>';
+  return { sx: sx, sy: sy, svg: s };
+}
+function plotPoint(e, svg, W, H, M, xr, yr) {
+  const b = svg.getBoundingClientRect(), px = (e.clientX - b.left) / b.width * W, py = (e.clientY - b.top) / b.height * H;
+  return { x: xr[0] + (px - M.l) / (W - M.l - M.r) * (xr[1] - xr[0]), y: yr[0] + (H - M.b - py) / (H - M.t - M.b) * (yr[1] - yr[0]) };
+}
+/* ===================== 1. SUPERVISADO ===================== */
+(function () {
+  const XR = [0, 40], YR = [10, 80], W = 560, H = 360, M = { l: 46, r: 12, t: 12, b: 44 };
+  const COL = { gato: '#D9480F', perro: '#1B6FB5' }, EM = { gato: '🐱', perro: '🐶' }, NM = { gato: 'gato', perro: 'perro' };
+  function make(cls, r) {
+    return cls === 'gato' ? { x: clamp(4.4 + gauss(r) * 1.0, 2, 8), y: clamp(25 + gauss(r) * 3, 17, 34), c: 'gato' }
+                          : { x: clamp(17 + gauss(r) * 6.5, 5, 38), y: clamp(48 + gauss(r) * 10, 26, 78), c: 'perro' };
+  }
+  const rt = rng(21), TEST = []; for (let i = 0; i < 24; i++) TEST.push(make(i % 2 ? 'perro' : 'gato', rt));
+  const rp = rng(5), POOL = []; for (let i = 0; i < 40; i++) POOL.push(make(rp() < 0.5 ? 'gato' : 'perro', rp));
+  const dist = (a, b) => { const dx = (a.x - b.x) / 40, dy = (a.y - b.y) / 70; return dx * dx + dy * dy; };
+  function knn(train, p, k) {
+    if (!train.length) return null;
+    const nb = train.map(t => ({ t: t, d: dist(t, p) })).sort((a, b) => a.d - b.d).slice(0, Math.min(k, train.length));
+    const v = { gato: 0, perro: 0 }; nb.forEach(n => v[n.t.c]++);
+    return { label: v.gato === v.perro ? nb[0].t.c : (v.gato > v.perro ? 'gato' : 'perro'), nb: nb, v: v };
+  }
+
+  MOD.sup = {
+    idea: '<p>Imaginá que estudiás con un cuaderno que tiene los ejemplos <b>y también las respuestas</b>. Después te toman una prueba con ejemplos nuevos. Eso es el <b>aprendizaje supervisado</b>: a la máquina le mostramos ejemplos con su <b>etiqueta</b> (la respuesta correcta) y aprende a adivinar la etiqueta de ejemplos que nunca vio.</p>' +
+      '<p>Teachable Machine funciona así: las clases que creaban ustedes eran las etiquetas.</p>' +
+      '<div class="words"><span><b>Dato:</b> información, como un peso o una foto</span><span><b>Etiqueta:</b> la respuesta correcta</span><span><b>Modelo:</b> lo que la máquina aprendió</span><span><b>Precisión:</b> porcentaje de aciertos</span></div>',
+    teacher: '<h4>Objetivo</h4><ul><li>Entender qué es una etiqueta y por qué el modelo se evalúa con ejemplos nuevos.</li><li>Ver que pocos datos, o datos mal etiquetados, bajan la precisión.</li></ul><h4>Tiempo</h4><ul><li>15 minutos de actividad más las preguntas.</li></ul><h4>Para debatir</h4><ul><li>¿Qué pasa si solo etiquetamos gatos? (Dirá «gato» para todo.)</li><li>¿Por qué se prueba con animales que ROBI no usó para aprender?</li><li>¿Quién pone las etiquetas? ¿Qué pasa si esa persona se equivoca?</li></ul><h4>Sin computadora</h4><ul><li>Repartí tarjetas con peso, altura y etiqueta. Cada equipo las ubica en una hoja cuadriculada. Después entregá tarjetas sin etiqueta y que las clasifiquen mirando a los 3 vecinos más cercanos.</li></ul>',
+    quiz: [
+      { q: 'En el aprendizaje supervisado, ¿qué necesita el modelo para aprender?', o: ['Ejemplos con su etiqueta (la respuesta correcta)', 'Solo datos, sin ninguna respuesta', 'Premios y castigos'], a: 0, why: 'Las etiquetas son la «supervisión»: le dicen al modelo cuál es la respuesta correcta.', hint: 'Pensá en el cuaderno con ejemplos y respuestas.' },
+      { q: 'Si una persona etiqueta mal algunos ejemplos, ¿qué le pasa a la precisión?', o: ['Sube', 'Baja', 'No cambia'], a: 1, why: 'Si los datos tienen respuestas equivocadas, el modelo aprende cosas equivocadas. Lo probaste con el botón de etiquetas mal puestas.', hint: 'Probalo en el gráfico: activá la opción de etiquetas equivocadas.' },
+      { q: '¿Cuál de estos es un ejemplo de aprendizaje supervisado?', o: ['Teachable Machine con las clases «Gato» y «Perro»', 'Agrupar canciones parecidas sin saber su género', 'Un robot que aprende a salir de un laberinto'], a: 0, why: 'En Teachable Machine cada foto tiene una clase, que es su etiqueta.', hint: 'Buscá el caso donde los ejemplos vienen con su respuesta.' }
+    ],
+    mount(el) {
+      let train = [], qi = 0, probe = null, flip = false, msg = null;
+      el.innerHTML = '<div class="two"><div style="display:grid;gap:10px;min-width:0"><div class="plot" id="plot"></div>' +
+        '<div class="legend"><span><i class="ci" style="background:#D9480F"></i>Gato</span><span><i class="sq" style="background:#1B6FB5"></i>Perro</span><span>Fondo de color: lo que ROBI cree en cada zona</span><span>Puntos chicos: animales de prueba (borde rojo = error)</span></div>' +
+        '<p style="font-size:15px;color:var(--muted)">Tocá cualquier lugar del gráfico para preguntarle a ROBI por un animal nuevo.</p></div><div class="side" id="side"></div></div>';
+      const plotEl = $('#plot'), side = $('#side');
+      function draw() {
+        const fr = plotFrame(W, H, M, XR, YR, [0, 10, 20, 30, 40], [10, 30, 50, 70], 'Peso (kg)', 'Altura (cm)'), sx = fr.sx, sy = fr.sy;
+        let s = fr.svg;
+        if (train.length) {
+          const nx = 40, ny = 26, cw = (W - M.l - M.r) / nx, ch = (H - M.t - M.b) / ny;
+          for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+            const p = { x: (i + 0.5) / nx * 40, y: 10 + (j + 0.5) / ny * 70 }, r = knn(train, p, 3);
+            s += '<rect x="' + (M.l + i * cw) + '" y="' + (H - M.b - (j + 1) * ch) + '" width="' + (cw + 0.5) + '" height="' + (ch + 0.5) + '" fill="' + COL[r.label] + '" opacity=".13"/>';
+          }
+        }
+        let right = 0;
+        TEST.forEach(t => {
+          const pr = knn(train, t, 3), wrong = pr && pr.label !== t.c; if (pr && !wrong) right++;
+          s += '<circle cx="' + sx(t.x) + '" cy="' + sy(t.y) + '" r="' + (wrong ? 6 : 4.5) + '" fill="' + (pr ? COL[pr.label] : '#FFFFFF') + '" stroke="' + (wrong ? '#B8283A' : '#0B2545') + '" stroke-width="' + (wrong ? 3 : 1) + '"/>';
+        });
+        train.forEach(t => {
+          const bad = t.c !== t.truth;
+          s += t.c === 'gato' ? '<circle cx="' + sx(t.x) + '" cy="' + sy(t.y) + '" r="7.5" fill="' + COL.gato + '" stroke="#fff" stroke-width="2"/><circle cx="' + sx(t.x) + '" cy="' + sy(t.y) + '" r="8.5" fill="none" stroke="#0B2545" stroke-width="' + (bad ? 3 : 1) + '"/>'
+            : '<rect x="' + (sx(t.x) - 7) + '" y="' + (sy(t.y) - 7) + '" width="14" height="14" fill="' + COL.perro + '" stroke="#fff" stroke-width="2"/><rect x="' + (sx(t.x) - 8) + '" y="' + (sy(t.y) - 8) + '" width="16" height="16" fill="none" stroke="#0B2545" stroke-width="' + (bad ? 3 : 1) + '"/>';
+        });
+        let pr = null;
+        if (probe) {
+          pr = knn(train, probe, 3);
+          if (pr) pr.nb.forEach(n => { s += '<line x1="' + sx(probe.x) + '" y1="' + sy(probe.y) + '" x2="' + sx(n.t.x) + '" y2="' + sy(n.t.y) + '" stroke="#0B2545" stroke-dasharray="4 3"/>'; });
+          s += '<circle cx="' + sx(probe.x) + '" cy="' + sy(probe.y) + '" r="10" fill="#FFC933" stroke="#0B2545" stroke-width="2"/><text x="' + sx(probe.x) + '" y="' + (sy(probe.y) + 5) + '" text-anchor="middle" style="fill:#0B2545;font-weight:700;font-size:14px">?</text>';
+        }
+        plotEl.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gráfico de peso y altura de animales">' + s + '</svg>';
+        const pct = Math.round(right / TEST.length * 100), nG = train.filter(t => t.c === 'gato').length, nP = train.length - nG, it = POOL[qi];
+        if (train.length >= 8 && pct >= 85) markGoal('sup');
+        side.innerHTML = '<div class="stat"><b>' + pct + '%</b><small>Aciertos con 24 animales de prueba (' + right + ' de 24)</small></div>' +
+          '<div class="stat" style="padding:8px 14px"><small>ROBI aprendió con <b style="display:inline;font-size:18px">' + train.length + '</b> ejemplos: ' + nG + ' gatos y ' + nP + ' perros</small></div>' +
+          (it ? '<div class="card-ex"><span class="em" aria-hidden="true">' + EM[it.c] + '</span><span class="m">Pesa ' + fmt1(it.x) + ' kg</span><span class="m">Mide ' + Math.round(it.y) + ' cm</span></div>' +
+            '<p><b>Vos sos quien etiqueta:</b> ¿qué animal es?</p><div class="bigact"><button class="btn" id="lg" data-l="gato">Es un gato</button><button class="btn" id="lp" data-l="perro">Es un perro</button></div>'
+            : '<div class="note info">Se terminaron los ejemplos nuevos. Reiniciá para probar de otra forma.</div>') +
+          (msg ? '<div class="note ' + msg.k + '"><p>' + msg.t + '</p></div>' : '') +
+          (pr ? '<div class="note info"><p>Un animal de ' + fmt1(probe.x) + ' kg y ' + Math.round(probe.y) + ' cm: ROBI dice <b>' + NM[pr.label] + '</b> (' + Math.max(pr.v.gato, pr.v.perro) + ' de ' + pr.nb.length + ' vecinos más cercanos).</p></div>' : (probe ? '<div class="note info"><p>ROBI todavía no aprendió nada.</p></div>' : '')) +
+          '<label class="field"><input type="checkbox" id="flip"' + (flip ? ' checked' : '') + '> Simular que 1 de cada 3 etiquetas sale mal</label>' +
+          '<button class="btn small" id="rst" style="justify-self:start">Reiniciar</button>';
+      }
+      side.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        if (b.id === 'rst') { train = []; qi = 0; probe = null; msg = null; return draw(); }
+        const l = b.dataset.l; if (!l) return;
+        const it = POOL[qi]; if (!it) return;
+        let c = l; if (flip && train.length % 3 === 2) c = l === 'gato' ? 'perro' : 'gato';
+        train.push({ x: it.x, y: it.y, c: c, truth: it.c });
+        msg = c !== it.c ? (flip && c !== l ? { k: 'bad', t: 'Alguien se equivocó al etiquetar: el ejemplo quedó guardado como «' + NM[c] + '». ¡Mirá qué pasa con la precisión!' } : { k: 'bad', t: 'Ese animal era un ' + NM[it.c] + ': quedó guardado con la etiqueta equivocada.' }) : { k: 'ok', t: 'Etiqueta correcta. ROBI aprendió un ejemplo más.' };
+        qi++; probe = null; draw();
+      });
+      side.addEventListener('change', e => { if (e.target.id === 'flip') { flip = e.target.checked; } });
+      plotEl.addEventListener('click', e => {
+        const svg = plotEl.querySelector('svg'); if (!svg) return;
+        const p = plotPoint(e, svg, W, H, M, XR, YR);
+        if (p.x < XR[0] || p.x > XR[1] || p.y < YR[0] || p.y > YR[1]) return;
+        probe = p; draw();
+      });
+      draw();
+    }
+  };
+})();
+
+/* ===================== 2. NO SUPERVISADO ===================== */
+(function () {
+  const XR = [0, 120], YR = [0, 240], W = 560, H = 360, M = { l: 46, r: 12, t: 12, b: 44 };
+  const COLS = ['#D9480F', '#1B6FB5', '#7B4BB7', '#9A7400', '#2E7D32', '#C2185B'];
+  const rd = rng(33), PTS = [];
+  [[90, 12, 45, 18], [18, 9, 190, 28], [55, 11, 115, 20]].forEach(g => { for (let i = 0; i < 20; i++) PTS.push({ x: clamp(g[0] + gauss(rd) * g[1], 2, 118), y: clamp(g[2] + gauss(rd) * g[3], 5, 235) }); });
+  const d2 = (a, b) => { const dx = (a.x - b.x) / 120, dy = (a.y - b.y) / 240; return dx * dx + dy * dy; };
+
+  MOD.uns = {
+    idea: '<p>Ahora pensá que te dan 60 fichas de estudiantes de una escuela. Cada ficha dice cuántos minutos hace deporte y cuántos mira pantallas por día. <b>Nadie te dice qué tipos de estudiantes hay.</b> No hay etiquetas.</p>' +
+      '<p>En el <b>aprendizaje no supervisado</b> la máquina busca sola <b>grupos de datos parecidos</b>. Un método clásico se llama <b>k-medias</b>: elegís cuántos grupos (k) querés y la máquina repite dos pasos hasta que los grupos dejan de cambiar.</p>' +
+      '<div class="words"><span><b>Paso 1:</b> cada punto elige el centro más cercano</span><span><b>Paso 2:</b> cada centro se mueve al promedio de su grupo</span></div>',
+    teacher: '<h4>Objetivo</h4><ul><li>Entender que sin etiquetas la máquina puede encontrar grupos por parecido.</li><li>Ver que las personas eligen k y les ponen nombre a los grupos: la máquina solo ve números.</li></ul><h4>Tiempo</h4><ul><li>15 minutos más las preguntas.</li></ul><h4>Para debatir</h4><ul><li>¿Y si elegimos k = 2 o k = 6? ¿Cuál es «el correcto»?</li><li>¿Por qué cambia el resultado si los centros iniciales son otros?</li><li>¿Dónde se usa esto? (Recomendaciones de videos y música, agrupar clientes, ordenar fotos.)</li></ul><h4>Sin computadora</h4><ul><li>Cada estudiante recibe una ficha con dos datos y se mueve por el patio. Eligen 3 «centros» al azar y cada uno camina hacia el más cercano. Se calcula el promedio del grupo y se repite.</li></ul>',
+    quiz: [
+      { q: 'En el aprendizaje no supervisado, ¿cómo son los datos?', o: ['Sin etiquetas: nadie dice la respuesta correcta', 'Con una etiqueta en cada ejemplo', 'Con premios y castigos'], a: 0, why: 'La máquina no recibe respuestas. Busca patrones y grupos por su cuenta.', hint: 'Recordá que las 60 fichas no decían a qué grupo pertenecía cada estudiante.' },
+      { q: '¿Quién les pone nombre a los grupos que encontró la máquina?', o: ['La máquina, porque entiende el significado', 'Las personas, mirando qué tienen en común', 'Se nombran solos'], a: 1, why: 'La máquina solo agrupa por parecido. Entender qué significa cada grupo es trabajo de las personas.', hint: 'La máquina devolvió números de grupo, no nombres.' },
+      { q: 'Una app agrupa a sus usuarios según gustos parecidos, sin categorías previas. ¿Qué tipo de aprendizaje usa?', o: ['Supervisado', 'No supervisado', 'Por refuerzo'], a: 1, why: 'No hay etiquetas: agrupa por parecido.', hint: 'Fijate si hay respuestas correctas dadas de antemano.' }
+    ],
+    mount(el) {
+      let k = 3, cents = null, asg = null, phase = 'init', iter = 0, done = false, msg = '', names = [];
+      el.innerHTML = '<div class="two"><div style="display:grid;gap:10px;min-width:0"><div class="plot" id="plot"></div><div class="legend" id="leg"></div></div><div class="side" id="side"></div></div>';
+      const plotEl = $('#plot'), side = $('#side');
+      function reset() { cents = null; asg = null; phase = 'init'; iter = 0; done = false; msg = ''; }
+      function init() {
+        const idx = shuffled(PTS.map((_, i) => i), Math.floor(Math.random() * 1e9)).slice(0, k);
+        cents = idx.map(i => ({ x: PTS[i].x, y: PTS[i].y })); asg = null; phase = 'assign'; iter = 0; done = false;
+        msg = 'Los centros empezaron en lugares al azar. Apretá «Paso» para seguir.';
+      }
+      function assign() {
+        asg = PTS.map(p => { let b = 0, bd = 1e9; cents.forEach((c, i) => { const d = d2(p, c); if (d < bd) { bd = d; b = i; } }); return b; });
+        phase = 'move'; msg = 'Paso 1: cada punto eligió el centro más cercano y tomó su color.';
+      }
+      function move() {
+        let moved = false;
+        cents = cents.map((c, i) => {
+          const m = PTS.filter((_, j) => asg[j] === i); if (!m.length) return c;
+          const n = { x: m.reduce((s, p) => s + p.x, 0) / m.length, y: m.reduce((s, p) => s + p.y, 0) / m.length };
+          if (d2(n, c) > 1e-6) moved = true; return n;
+        });
+        iter++;
+        if (!moved) { done = true; phase = 'done'; msg = '¡Listo! Los centros ya no se mueven: los grupos quedaron estables.'; if (k === 3) markGoal('uns'); }
+        else { phase = 'assign'; msg = 'Paso 2: cada centro se movió al promedio de su grupo.'; }
+      }
+      function step() { if (done) return; if (!cents) init(); else if (phase === 'assign') assign(); else if (phase === 'move') move(); }
+      function total() { if (!asg) return null; return Math.round(PTS.reduce((s, p, j) => s + Math.sqrt(d2(p, cents[asg[j]])), 0) * 100); }
+      function draw() {
+        const fr = plotFrame(W, H, M, XR, YR, [0, 30, 60, 90, 120], [0, 60, 120, 180, 240], 'Minutos de deporte por día', 'Minutos de pantalla por día'), sx = fr.sx, sy = fr.sy;
+        let s = fr.svg;
+        PTS.forEach((p, j) => {
+          const g = asg ? asg[j] : -1;
+          s += '<circle cx="' + sx(p.x) + '" cy="' + sy(p.y) + '" r="7.5" fill="' + (g >= 0 ? COLS[g] : '#7D8FA3') + '" stroke="#fff" stroke-width="1.5"/>' + (g >= 0 ? '<text x="' + sx(p.x) + '" y="' + (sy(p.y) + 3.5) + '" text-anchor="middle" style="fill:#fff;font-weight:700;font-size:10px">' + (g + 1) + '</text>' : '');
+        });
+        if (cents) cents.forEach((c, i) => {
+          const x = sx(c.x), y = sy(c.y);
+          s += '<polygon points="' + x + ',' + (y - 13) + ' ' + (x + 13) + ',' + y + ' ' + x + ',' + (y + 13) + ' ' + (x - 13) + ',' + y + '" fill="' + COLS[i] + '" stroke="#0B2545" stroke-width="3"/><text x="' + x + '" y="' + (y + 4) + '" text-anchor="middle" style="fill:#fff;font-weight:700;font-size:12px">' + (i + 1) + '</text>';
+        });
+        plotEl.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Gráfico de deporte y pantalla de 60 estudiantes">' + s + '</svg>';
+        $('#leg').innerHTML = '<span><i class="ci" style="background:#7D8FA3"></i>Estudiante</span><span><i style="background:#0B2545;transform:rotate(45deg) scale(.8)"></i>Centro del grupo</span>';
+        const lbl = { init: 'Poner centros al azar', assign: 'Paso 1: elegir centro más cercano', move: 'Paso 2: mover los centros', done: 'Terminó' }[phase];
+        const t = total();
+        let sum = '';
+        if (done) {
+          sum = '<span class="section-title">Los grupos que encontró la máquina</span>' + cents.map((c, i) => {
+            const m = PTS.filter((_, j) => asg[j] === i);
+            return '<label style="display:grid;gap:4px;font-size:15px"><span><b style="color:' + COLS[i] + '">Grupo ' + (i + 1) + '</b>: ' + m.length + ' estudiantes, en promedio ' + Math.round(c.x) + ' min de deporte y ' + Math.round(c.y) + ' min de pantalla</span>' +
+              '<input type="text" class="nm" data-i="' + i + '" maxlength="30" placeholder="Ponele un nombre al grupo" value="' + esc(names[i] || '') + '" style="border:2px solid var(--ink);border-radius:8px;padding:6px 10px"></label>';
+          }).join('') + '<p style="font-size:14px;color:var(--muted)">La máquina solo dio números. Los nombres los ponés vos.</p>';
+        }
+        side.innerHTML = '<div><span class="section-title">¿Cuántos grupos (k)?</span><div class="seg" id="ks" style="margin-top:6px">' + [1, 2, 3, 4, 5, 6].map(n => '<button data-k="' + n + '" class="' + (n === k ? 'on' : '') + '">' + n + '</button>').join('') + '</div></div>' +
+          '<div class="actions"><button class="btn primary" id="st"' + (done ? ' disabled' : '') + '>' + lbl + '</button><button class="btn small" id="run"' + (done ? ' disabled' : '') + '>Correr hasta el final</button></div>' +
+          '<button class="btn small" id="rs" style="justify-self:start">Empezar de nuevo</button>' +
+          '<div class="stat"><b>' + iter + '</b><small>Rondas completas' + (t !== null ? ' · distancia total ' + t : '') + '</small></div>' +
+          (msg ? '<div class="note info"><p>' + msg + '</p></div>' : '') +
+          (done && k !== 3 ? '<div class="note bad"><p>Con k = ' + k + ' también termina, pero ¿se ven ' + k + ' grupos a simple vista? Probá con otro k y comparen.</p></div>' : '') +
+          (done && k === 3 ? '<div class="note ok"><p>Con k = 3 los grupos coinciden con lo que se ve en el gráfico.</p></div>' : '') + sum;
+      }
+      side.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        if (b.dataset.k) { k = +b.dataset.k; names = []; reset(); return draw(); }
+        if (b.id === 'st') { step(); draw(); }
+        if (b.id === 'run') { for (let n = 0; n < 80 && !done; n++) step(); draw(); }
+        if (b.id === 'rs') { names = []; reset(); draw(); }
+      });
+      side.addEventListener('input', e => { if (e.target.classList.contains('nm')) names[+e.target.dataset.i] = e.target.value; });
+      draw();
+    }
+  };
+})();
+/* ===================== 3. POR REFUERZO ===================== */
+(function () {
+  const BASE = ['.....G', '....T.', '.###..', '......', 'S.T...'];
+  const DIR = [[0, -1], [1, 0], [0, 1], [-1, 0]], ARR = ['↑', '→', '↓', '←'];
+  const NR = BASE.length, NC = BASE[0].length;
+  MOD.rl = {
+    idea: '<p>En el <b>aprendizaje por refuerzo</b> no hay etiquetas ni grupos. Un <b>agente</b> (en este caso ROBI) aprende <b>probando</b>: cada acción le da una <b>recompensa</b> o un castigo, y con el tiempo descubre qué le conviene hacer. Es parecido a entrenar a una mascota o a aprender un videojuego.</p>' +
+      '<div class="words"><span><b>Agente:</b> el que aprende</span><span><b>Acción:</b> lo que puede hacer</span><span><b>Recompensa:</b> el premio o castigo que recibe</span><span><b>Explorar:</b> probar cosas nuevas</span></div>',
+    teacher: '<h4>Objetivo</h4><ul><li>Entender que el agente aprende por prueba y error, guiado por recompensas.</li><li>Ver que la forma de premiar cambia lo que aprende.</li></ul><h4>Tiempo</h4><ul><li>15 minutos más las preguntas.</li></ul><h4>Para debatir</h4><ul><li>¿Qué pasa si la trampa no castiga? ¿Y si castiga demasiado?</li><li>¿Por qué al principio ROBI prueba cosas al azar?</li><li>¿Qué problemas puede haber si el premio está mal diseñado? (La máquina busca el premio, aunque no sea lo que queríamos.)</li></ul><h4>Sin computadora</h4><ul><li>Dibujá el tablero en el piso con cinta. Un estudiante es ROBI y camina por prueba y error. Otro anota los puntos y los demás dibujan en cada casilla la flecha que parece mejor después de cada intento.</li></ul>',
+    quiz: [
+      { q: '¿Cómo aprende ROBI en el laberinto?', o: ['Probando acciones y recibiendo premios o castigos', 'Mirando ejemplos con la respuesta correcta', 'Agrupando casillas parecidas'], a: 0, why: 'Eso es el refuerzo: aprende de las consecuencias de sus propias acciones.', hint: 'Nadie le mostró el camino correcto: lo fue descubriendo.' },
+      { q: 'Si la trampa no castiga (0 puntos), ¿qué puede pasar?', o: ['ROBI nunca va a pasar por ahí', 'ROBI puede cruzar la trampa si le conviene', 'ROBI deja de aprender'], a: 1, why: 'Si pasar por la trampa no le cuesta nada, puede ser un camino válido. La recompensa define lo que ROBI aprende.', hint: 'Probalo en la actividad: cambiá el castigo de la trampa y entrená de nuevo.' },
+      { q: '¿Por qué ROBI prueba caminos al azar al principio?', o: ['Porque está roto', 'Para explorar y descubrir qué acciones dan premio', 'Para gastar energía'], a: 1, why: 'Sin explorar, nunca descubriría caminos mejores.', hint: 'Al empezar no sabe nada del laberinto.' }
+    ],
+    mount(el) {
+      let grid = BASE.map(r => r.split('')), Q, episodes = 0, trapR = -50, pos = null, anim = null, msg = '', start = { x: 0, y: 4 };
+      function resetQ() { Q = grid.map(r => r.map(() => [0, 0, 0, 0])); episodes = 0; }
+      resetQ();
+      function stepEnv(x, y, a) {
+        let nx = x + DIR[a][0], ny = y + DIR[a][1];
+        if (nx < 0 || ny < 0 || nx >= NC || ny >= NR || grid[ny][nx] === '#') { nx = x; ny = y; }
+        const c = grid[ny][nx];
+        if (c === 'G') return { nx: nx, ny: ny, r: 100, end: true };
+        if (c === 'T') return { nx: nx, ny: ny, r: trapR, end: true };
+        return { nx: nx, ny: ny, r: -1, end: false };
+      }
+      const best = (x, y) => Math.max.apply(null, Q[y][x]);
+      function argmax(q, rand) {
+        let m = -1e9, idx = [];
+        q.forEach((v, i) => { if (v > m + 1e-9) { m = v; idx = [i]; } else if (Math.abs(v - m) <= 1e-9) idx.push(i); });
+        return rand ? idx[Math.floor(Math.random() * idx.length)] : idx[0];
+      }
+      function episode() {
+        let x = start.x, y = start.y;
+        for (let t = 0; t < 80; t++) {
+          const a = Math.random() < 0.25 ? Math.floor(Math.random() * 4) : argmax(Q[y][x], true), s = stepEnv(x, y, a);
+          const target = s.r + (s.end ? 0 : 0.9 * best(s.nx, s.ny));
+          Q[y][x][a] += 0.5 * (target - Q[y][x][a]); x = s.nx; y = s.ny; if (s.end) break;
+        }
+        episodes++;
+      }
+      function greedy() {
+        let x = start.x, y = start.y; const path = [{ x: x, y: y }];
+        for (let t = 0; t < 40; t++) {
+          const q = Q[y][x]; if (q.every(v => v === 0)) return { st: 'lost', path: path };
+          const s = stepEnv(x, y, argmax(q, false)); x = s.nx; y = s.ny; path.push({ x: x, y: y });
+          if (grid[y][x] === 'G') return { st: 'goal', path: path }; if (grid[y][x] === 'T') return { st: 'trap', path: path };
+        }
+        return { st: 'lost', path: path };
+      }
+      function stop() { if (anim) { clearInterval(anim); anim = null; } pos = null; }
+      function cell(x, y) {
+        const c = grid[y][x], q = Q[y][x]; let cls = 'cell', inner = '', ar = '', st = '';
+        if (c === '#') cls += ' wall'; else if (c === 'G') { cls += ' goal'; inner = '🔋'; } else if (c === 'T') inner = '🔥'; else if (c === 'S') cls += ' start';
+        if (c !== '#' && c !== 'G' && c !== 'T' && !q.every(v => v === 0)) {
+          const v = best(x, y); ar = ARR[argmax(q, false)];
+          st = 'background:' + (v > 0 ? 'rgba(10,127,140,' + Math.min(0.55, v / 100 * 0.9 + 0.08) + ')' : 'rgba(184,40,58,' + Math.min(0.45, -v / 40 * 0.45 + 0.06) + ')');
+        }
+        const here = pos ? (pos.x === x && pos.y === y) : (c === 'S');
+        return '<button class="' + cls + '" style="' + st + '" data-x="' + x + '" data-y="' + y + '" aria-label="Casilla ' + (x + 1) + ',' + (y + 1) + '">' + inner + (ar ? '<span class="ar">' + ar + '</span>' : '') + (here ? '<span class="bot">🤖</span>' : '') + '</button>';
+      }
+      function render() {
+        const g = greedy();
+        if (g.st === 'goal') markGoal('rl');
+        const res = g.st === 'goal' ? '<div class="note ok"><p>El mejor camino que aprendió llega a la meta en ' + (g.path.length - 1) + ' pasos.</p></div>'
+          : g.st === 'trap' ? '<div class="note bad"><p>El mejor camino que conoce cae en una trampa. Hay que entrenarlo más o revisar el castigo.</p></div>'
+          : '<div class="note info"><p>' + (episodes ? 'Todavía no sabe cómo llegar a la meta. Seguí entrenando.' : 'ROBI todavía no entrenó. No sabe nada del laberinto.') + '</p></div>';
+        let rows = ''; for (let y = 0; y < NR; y++) for (let x = 0; x < NC; x++) rows += cell(x, y);
+        el.innerHTML = '<p>ROBI 🤖 sale de la esquina de abajo y busca la batería 🔋 (+100 puntos). Cada paso cuesta −1. Las trampas 🔥 castigan. Entrenalo y mirá cómo aparecen <b>flechas</b> con la mejor acción que aprendió en cada casilla. Tocá una casilla vacía para poner o sacar una trampa.</p>' +
+          '<div class="world" id="world">' + rows + '</div>' +
+          '<div class="actions" style="justify-content:center"><button class="btn" data-n="1">+1 intento</button><button class="btn" data-n="20">+20 intentos</button><button class="btn primary" data-n="200">+200 intentos</button><button class="btn" id="show">Mostrar el mejor camino</button></div>' +
+          '<div class="actions" style="justify-content:center"><span class="section-title">Castigo de la trampa</span><div class="seg">' + [-50, -5, 0].map(p => '<button data-p="' + p + '" class="' + (p === trapR ? 'on' : '') + '">' + p + '</button>').join('') + '</div><button class="btn small" id="clr">Borrar lo aprendido</button></div>' +
+          '<div class="stat"><b>' + episodes + '</b><small>intentos completos de ROBI</small></div>' + res + (msg ? '<div class="note info"><p>' + msg + '</p></div>' : '') +
+          '<p style="font-size:14px;color:var(--muted)">Colores: verde azulado = casilla buena, rojo = casilla mala. Las flechas muestran la acción que ROBI prefiere.</p>';
+      }
+      el.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        if (b.dataset.n) { stop(); msg = ''; for (let i = 0; i < +b.dataset.n; i++) episode(); return render(); }
+        if (b.dataset.p !== undefined) { stop(); trapR = +b.dataset.p; resetQ(); msg = 'Cambió el castigo de la trampa. ROBI empieza a aprender de nuevo.'; return render(); }
+        if (b.id === 'clr') { stop(); resetQ(); msg = ''; return render(); }
+        if (b.id === 'show') {
+          stop(); const g = greedy(); let i = 0; pos = g.path[0]; render();
+          anim = setInterval(() => { i++; if (i >= g.path.length) { stop(); render(); return; } pos = g.path[i]; render(); }, 350); return;
+        }
+        if (b.dataset.x !== undefined) {
+          const x = +b.dataset.x, y = +b.dataset.y, c = grid[y][x];
+          if (c === '.' || c === 'T') { stop(); grid[y][x] = c === '.' ? 'T' : '.'; resetQ(); msg = 'Cambiaste el laberinto: ROBI tiene que aprender de nuevo.'; render(); }
+        }
+      });
+      render();
+      return stop;
+    }
+  };
+})();
+
+/* ===================== 4. RED NEURONAL ===================== */
+(function () {
+  const LAB = ['☀️ Sol', '📚 Tarea', '👫 Amigos'];
+  const RULES = {
+    A: { t: 'Salgo a jugar solo si terminé la tarea y (hay sol o van mis amigos).', f: x => (x[1] && (x[0] || x[2])) ? 1 : 0 },
+    B: { t: 'Salgo a jugar si hay sol y van mis amigos.', f: x => (x[0] && x[2]) ? 1 : 0 },
+    C: { t: 'Salgo a jugar si se cumplen al menos 2 de las 3 cosas.', f: x => (x[0] + x[1] + x[2]) >= 2 ? 1 : 0 }
+  };
+  const COMBOS = []; for (let i = 0; i < 8; i++) COMBOS.push([(i >> 2) & 1, (i >> 1) & 1, i & 1]);
+  MOD.nn = {
+    idea: '<p>Las <b>redes neuronales</b> son la base de muchas IA actuales. Están hechas de <b>neuronas artificiales</b>, que son muy simples: reciben datos, multiplican cada uno por un <b>peso</b> (cuánto importa), los suman y, si el total es mayor que cero, responden «sí».</p>' +
+      '<p>Lo que una red <b>aprende</b> son esos pesos. Entrenar es ir ajustándolos hasta que las respuestas salgan bien. Acá tenés una sola neurona. Las redes de las IA modernas tienen millones.</p>' +
+      '<div class="words"><span><b>Peso:</b> qué tan importante es un dato</span><span><b>Empujón (b):</b> un número que se suma al final; si es negativo, la neurona es más exigente</span></div>',
+    teacher: '<h4>Objetivo</h4><ul><li>Entender que una neurona artificial hace una suma ponderada y decide.</li><li>Ver que «aprender» es ajustar pesos, y que la misma neurona puede aprender reglas distintas.</li></ul><h4>Tiempo</h4><ul><li>15 minutos más las preguntas.</li></ul><h4>Para debatir</h4><ul><li>¿Qué peso le diste a la tarea? ¿Por qué tiene que ser grande?</li><li>¿Quién ajusta los pesos cuando entrena la IA? (El algoritmo, no una persona.)</li><li>¿Una sola neurona alcanza para reconocer una cara? ¿Qué hace falta?</li></ul><h4>Sin computadora</h4><ul><li>Repartí tres tarjetas de datos (sol, tarea, amigos) y tres de pesos. Los estudiantes multiplican, suman el empujón y deciden. Después cambian los pesos para que la neurona acierte las 8 situaciones.</li></ul>',
+    quiz: [
+      { q: '¿Qué son los «pesos» de una neurona?', o: ['Números que dicen cuánto importa cada dato', 'El tamaño del archivo', 'Las respuestas correctas'], a: 0, why: 'Un peso grande hace que ese dato pese mucho en la decisión.', hint: 'Era lo que movías con los controles deslizantes.' },
+      { q: 'Cuando una red neuronal «aprende», ¿qué es lo que cambia?', o: ['Sus pesos', 'Los datos de entrenamiento', 'La pantalla'], a: 0, why: 'Entrenar es ajustar los pesos para que las respuestas salgan mejor. Lo viste con el botón de ajustar.', hint: 'Mirá qué se movió cuando apretaste «Dejar que ROBI ajuste».' },
+      { q: 'Una sola neurona es muy simple. ¿Cómo hacen las IA para resolver cosas difíciles como reconocer caras?', o: ['Usan una sola neurona muy grande', 'Combinan muchísimas neuronas en capas', 'No usan neuronas'], a: 1, why: 'Muchas neuronas conectadas en capas pueden resolver problemas complejos.', hint: 'Pensá en «redes»: muchas neuronas conectadas.' }
+    ],
+    mount(el) {
+      let w = [0, 0, 0], b = 0, rule = 'A', live = [1, 1, 0];
+      const out = x => (w[0] * x[0] + w[1] * x[1] + w[2] * x[2] + b) > 0 ? 1 : 0;
+      const nOk = () => COMBOS.filter(x => out(x) === RULES[rule].f(x)).length;
+      el.innerHTML = '<div class="two"><div style="display:grid;gap:12px;min-width:0"><div><span class="section-title">Regla que ROBI tiene que aprender</span><div class="seg" id="rules" style="margin-top:6px">' +
+        Object.keys(RULES).map(k => '<button data-r="' + k + '" class="' + (k === rule ? 'on' : '') + '">Regla ' + k + '</button>').join('') + '</div><p id="rt" style="margin-top:8px"></p></div>' +
+        '<div class="plot" id="diag"></div><div class="actions" id="tg"></div><p id="calc" style="font:500 15px var(--f-mono)"></p></div>' +
+        '<div class="side"><span class="section-title">Pesos y empujón</span>' +
+        LAB.map((n, i) => '<div class="rowline"><label for="w' + i + '">' + n + '</label><input type="range" id="w' + i + '" min="-6" max="6" step="1" value="0"><output id="wo' + i + '">0</output></div>').join('') +
+        '<div class="rowline"><label for="bb">Empujón</label><input type="range" id="bb" min="-10" max="10" step="1" value="0"><output id="bo">0</output></div>' +
+        '<div class="actions"><button class="btn" id="one">Dejar que ROBI ajuste (1 ronda)</button><button class="btn primary" id="all">Entrenar hasta acertar</button></div><button class="btn small" id="zero" style="justify-self:start">Poner todo en cero</button>' +
+        '<div class="stat"><b id="okn">0 de 8</b><small>situaciones que acierta</small></div><div id="tt"></div></div></div>';
+      const ids = ['w0', 'w1', 'w2', 'bb'];
+      function sync() { ids.forEach((id, i) => { const v = i < 3 ? w[i] : b; $('#' + id).value = v; $((i < 3 ? '#wo' + i : '#bo')).textContent = v; }); }
+      function draw() {
+        $('#rt').textContent = RULES[rule].t;
+        const ys = [45, 120, 195], tot = w[0] * live[0] + w[1] * live[1] + w[2] * live[2] + b, o = tot > 0 ? 1 : 0;
+        let s = '';
+        ys.forEach((y, i) => {
+          const wi = w[i], col = wi > 0 ? '#0A7F8C' : wi < 0 ? '#B8283A' : '#9FB0C2';
+          s += '<line x1="132" y1="' + y + '" x2="300" y2="120" stroke="' + col + '" stroke-width="' + (1.5 + Math.abs(wi) * 1.6) + '"' + (wi === 0 ? ' stroke-dasharray="5 4"' : '') + '/>';
+          s += '<text x="216" y="' + (y + (120 - y) * 0.45 - 6) + '" text-anchor="middle" style="font-weight:700;font-size:14px;fill:' + col + '">' + (wi > 0 ? '+' : '') + wi + '</text>';
+          s += '<circle cx="110" cy="' + y + '" r="22" fill="' + (live[i] ? '#FFC933' : '#FFFFFF') + '" stroke="#0B2545" stroke-width="3"/><text x="110" y="' + (y + 5) + '" text-anchor="middle" style="font-weight:700;font-size:15px;fill:#0B2545">' + live[i] + '</text>';
+          s += '<text x="8" y="' + (y + 5) + '" style="font-weight:700;font-size:14px;fill:#0B2545">' + LAB[i] + '</text>';
+        });
+        s += '<circle cx="335" cy="120" r="42" fill="#FFFFFF" stroke="#0B2545" stroke-width="4"/><text x="335" y="118" text-anchor="middle" style="font-weight:700;font-size:26px;fill:#0B2545">Σ</text><text x="335" y="138" text-anchor="middle" style="font-size:12px">' + (b > 0 ? '+' : '') + b + '</text>';
+        s += '<line x1="377" y1="120" x2="440" y2="120" stroke="#0B2545" stroke-width="3"/><circle cx="470" cy="120" r="30" fill="' + (o ? '#D9F2E3' : '#FBDDE1') + '" stroke="' + (o ? '#16794A' : '#B8283A') + '" stroke-width="4"/><text x="470" y="127" text-anchor="middle" style="font-weight:700;font-size:20px;fill:' + (o ? '#16794A' : '#B8283A') + '">' + (o ? 'Sí' : 'No') + '</text>';
+        $('#diag').innerHTML = '<svg viewBox="0 0 520 240" role="img" aria-label="Diagrama de una neurona con tres entradas">' + s + '</svg>';
+        $('#tg').innerHTML = '<span class="section-title">Probá un día:</span>' + LAB.map((n, i) => '<button class="tog' + (live[i] ? ' on' : '') + '" data-t="' + i + '" aria-pressed="' + (live[i] === 1) + '">' + n + ': ' + (live[i] ? 'Sí' : 'No') + '</button>').join('');
+        $('#calc').textContent = LAB.map((n, i) => live[i] + '×(' + w[i] + ')').join(' + ') + ' + (' + b + ') = ' + tot + (o ? ' → mayor que 0: sale a jugar' : ' → no es mayor que 0: no sale');
+        const ok = nOk(); $('#okn').textContent = ok + ' de 8'; if (ok === 8) markGoal('nn');
+        $('#tt').innerHTML = '<table class="tt"><tr><th>☀️</th><th>📚</th><th>👫</th><th>Debería</th><th>ROBI</th><th></th></tr>' + COMBOS.map(x => {
+          const t = RULES[rule].f(x), y = out(x), cur = x.join() === live.join();
+          return '<tr class="' + (cur ? 'cur' : '') + '"><td>' + x[0] + '</td><td>' + x[1] + '</td><td>' + x[2] + '</td><td>' + (t ? 'Sí' : 'No') + '</td><td>' + (y ? 'Sí' : 'No') + '</td><td class="' + (t === y ? 'good' : 'bad') + '">' + (t === y ? '✔' : '✘') + '</td></tr>';
+        }).join('') + '</table>';
+      }
+      function round() {
+        let ch = 0;
+        COMBOS.forEach(x => { const t = RULES[rule].f(x), y = out(x); if (t !== y) { const d = t - y; for (let i = 0; i < 3; i++) w[i] = clamp(w[i] + d * x[i], -6, 6); b = clamp(b + d, -10, 10); ch++; } });
+        return ch;
+      }
+      el.addEventListener('input', e => {
+        const i = ids.indexOf(e.target.id); if (i < 0) return;
+        if (i < 3) w[i] = +e.target.value; else b = +e.target.value;
+        $((i < 3 ? '#wo' + i : '#bo')).textContent = e.target.value; draw();
+      });
+      el.addEventListener('click', e => {
+        const x = e.target.closest('button'); if (!x) return;
+        if (x.dataset.r) { rule = x.dataset.r; document.querySelectorAll('#rules button').forEach(bn => bn.classList.toggle('on', bn.dataset.r === rule)); }
+        else if (x.dataset.t !== undefined) { live[+x.dataset.t] ^= 1; }
+        else if (x.id === 'one') { const c = round(); sync(); toast(c ? 'ROBI corrigió ' + c + (c === 1 ? ' vez.' : ' veces.') : 'No hizo falta corregir nada.'); }
+        else if (x.id === 'all') { let n = 0; while (nOk() < 8 && n < 60) { round(); n++; } sync(); toast(nOk() === 8 ? 'ROBI acertó todo después de ' + n + (n === 1 ? ' ronda.' : ' rondas.') : 'No logró acertar todo con una sola neurona.'); }
+        else if (x.id === 'zero') { w = [0, 0, 0]; b = 0; sync(); }
+        else return;
+        draw();
+      });
+      sync(); draw();
+    }
+  };
+})();
+/* ===================== 5. LENGUAJE ===================== */
+(function () {
+  const SENT = [
+    'el robot aprende de los datos', 'el robot ayuda a los estudiantes', 'el robot juega en el patio', 'el robot duerme en la escuela',
+    'el robot come en la cocina', 'el robot corre en el parque', 'el robot explica la tarea', 'el robot necesita datos buenos',
+    'el perro corre en el parque', 'el perro juega en el patio', 'el perro duerme en la casa', 'el perro come en la cocina',
+    'el perro ayuda a la maestra', 'el perro juega con los estudiantes', 'el gato duerme en el sillón', 'el gato come en la cocina',
+    'el gato juega en la casa', 'el gato corre en el patio', 'el gato juega con el robot', 'el gato come en el patio',
+    'la maestra ayuda a los estudiantes', 'la maestra explica la tarea', 'la maestra aprende de los estudiantes', 'la maestra juega en el patio',
+    'la maestra explica los datos', 'la maestra explica los ejemplos', 'los estudiantes aprenden con el robot', 'los estudiantes aprenden en la escuela',
+    'los estudiantes juegan en el patio', 'los estudiantes comen en el patio', 'los estudiantes corren en el parque', 'los estudiantes hacen la tarea en la casa',
+    'los estudiantes necesitan ejemplos variados', 'la inteligencia artificial aprende de los datos', 'la inteligencia artificial aprende de los ejemplos',
+    'la inteligencia artificial ayuda a los estudiantes', 'la inteligencia artificial necesita muchos datos', 'el modelo aprende de los ejemplos',
+    'el modelo necesita muchos ejemplos', 'el modelo necesita datos buenos', 'el modelo aprende con datos buenos', 'el modelo comete errores con datos malos',
+    'el robot comete errores con datos malos', 'los datos buenos ayudan al modelo', 'los datos malos confunden al robot', 'los ejemplos variados ayudan al modelo'
+  ];
+  const ORDER = shuffled(SENT.map((_, i) => i), 5).map(i => SENT[i]);
+  function build(n) {
+    const nx = {}, words = new Set();
+    ORDER.slice(0, n).forEach(s => {
+      const t = ['<s>'].concat(s.split(' '), ['.']);
+      for (let i = 0; i < t.length - 1; i++) { (nx[t[i]] = nx[t[i]] || {})[t[i + 1]] = ((nx[t[i]] || {})[t[i + 1]] || 0) + 1; if (i > 0) words.add(t[i]); }
+    });
+    let pairs = 0; Object.keys(nx).forEach(k => pairs += Object.keys(nx[k]).length);
+    return { nx: nx, words: words.size, pairs: pairs };
+  }
+  MOD.lm = {
+    idea: '<p>Los chats de IA y los teclados que sugieren palabras usan <b>modelos de lenguaje</b>. Su truco básico es <b>predecir la próxima palabra</b>: miran los textos que leyeron y calculan qué palabra suele venir después de la anterior.</p>' +
+      '<p>Acá ROBI leyó unas pocas oraciones. Vos armás una oración palabra por palabra y ves los <b>porcentajes</b> con que él elegiría cada una. Los modelos reales leyeron miles de millones de textos, pero la idea de fondo es parecida.</p>' +
+      '<div class="words"><span><b>Texto de entrenamiento:</b> lo que el modelo leyó</span><span><b>Probabilidad:</b> qué tan seguido aparece una palabra después de otra</span></div>',
+    teacher: '<h4>Objetivo</h4><ul><li>Entender que un modelo de lenguaje predice palabras según patrones de los textos que leyó.</li><li>Ver que no «sabe» si lo que dice es verdad, y que más datos dan mejores resultados.</li></ul><h4>Tiempo</h4><ul><li>15 minutos más las preguntas.</li></ul><h4>Para debatir</h4><ul><li>¿Es cierto que «el robot come en la cocina»? ¿Por qué el modelo pudo decirlo?</li><li>¿Qué pasa con pocas oraciones? ¿Y con muchas?</li><li>¿Cómo se relaciona con los chats de IA que usan en la vida real?</li></ul><h4>Sin computadora</h4><ul><li>Cada equipo recibe 10 oraciones recortadas. Arman una tabla de qué palabra sigue a cuál y juegan a continuar una oración tirando un dado según las frecuencias.</li></ul>',
+    quiz: [
+      { q: '¿Cómo elige un modelo de lenguaje la siguiente palabra?', o: ['Según qué palabras suelen aparecer después en los textos que leyó', 'Porque entiende lo que quiere decir como una persona', 'Al azar total'], a: 0, why: 'Calcula probabilidades a partir de los patrones de sus datos de entrenamiento.', hint: 'Mirá las barras: venían de contar los textos que leyó.' },
+      { q: 'ROBI armó una oración como «el robot come en la cocina». ¿Qué nos muestra?', o: ['Que el modelo puede decir cosas que suenan bien pero no son ciertas', 'Que los robots comen de verdad', 'Que el modelo está roto'], a: 0, why: 'El modelo sigue patrones de palabras, no comprueba si algo es verdad.', hint: 'Pensá si el modelo sabe algo sobre robots y comida.' },
+      { q: '¿Por qué con más oraciones de entrenamiento suena mejor?', o: ['Porque ve más ejemplos de cómo se combinan las palabras', 'Porque pesa más', 'Porque se vuelve más lento'], a: 0, why: 'Más datos variados dan más opciones y mejores probabilidades.', hint: 'Compará lo que pasa con 10 oraciones y con 45.' }
+    ],
+    mount(el) {
+      let size = 10, M = build(size), cur = ['<s>'], done = 0, last = '';
+      el.innerHTML = '<div class="side"><div class="actions"><span class="section-title">ROBI leyó</span><div class="seg" id="sz">' + [10, 25, SENT.length].map(n => '<button data-n="' + n + '" class="' + (n === size ? 'on' : '') + '">' + n + ' oraciones</button>').join('') + '</div></div>' +
+        '<div class="sentence" id="sen" aria-live="polite"></div><div id="nxts" class="nexts"></div><div class="actions" id="ctl"></div><div id="info"></div></div>';
+      const probs = tok => { const o = M.nx[tok] || {}, tot = Object.keys(o).reduce((s, k) => s + o[k], 0); return Object.keys(o).map(k => ({ w: k, p: o[k] / tot })).sort((a, b) => b.p - a.p); };
+      function render() {
+        const toks = cur.slice(1), ended = cur[cur.length - 1] === '.';
+        $('#sen').innerHTML = (toks.length ? esc(toks.join(' ').replace(' .', '.')) : '<span style="color:var(--muted)">Elegí cómo empieza la oración…</span>') + (ended ? '' : '<span class="cur"></span>');
+        const list = ended ? [] : probs(cur[cur.length - 1]).slice(0, 6);
+        $('#nxts').innerHTML = list.map(o => '<button class="nx" data-w="' + esc(o.w) + '"><span>' + (o.w === '.' ? '(terminar)' : esc(o.w)) + '</span><span class="tr"><i style="width:' + Math.round(o.p * 100) + '%"></i></span><b>' + Math.round(o.p * 100) + '%</b></button>').join('');
+        $('#ctl').innerHTML = (ended ? '' : '<button class="btn" id="top">Elegir la más probable</button><button class="btn" id="rnd">Elegir al azar con esas probabilidades</button>') + '<button class="btn small" id="new">' + (ended ? 'Armar otra oración' : 'Empezar de nuevo') + '</button>';
+        $('#info').innerHTML = '<div class="stat"><b>' + done + '</b><small>oraciones terminadas · ROBI conoce ' + M.words + ' palabras y ' + M.pairs + ' pares de palabras</small></div>' +
+          (ended ? '<div class="note info"><p>¿Es verdad lo que dijo ROBI? ¿Lo sabe, o solo siguió patrones?</p></div>' : '') +
+          (size === 10 && !ended && list.length === 1 ? '<div class="note info"><p>Con pocas oraciones, a veces ROBI solo conoce una opción. Probá con más oraciones.</p></div>' : '');
+      }
+      function pick(w) { cur.push(w); if (w === '.') { done++; if (done >= 3) markGoal('lm'); } render(); }
+      el.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        if (b.dataset.n) { size = +b.dataset.n; M = build(size); cur = ['<s>']; document.querySelectorAll('#sz button').forEach(x => x.classList.toggle('on', +x.dataset.n === size)); return render(); }
+        if (b.dataset.w) return pick(b.dataset.w);
+        if (b.id === 'new') { cur = ['<s>']; return render(); }
+        if (b.id === 'top') return pick(probs(cur[cur.length - 1])[0].w);
+        if (b.id === 'rnd') { const l = probs(cur[cur.length - 1]); let r = Math.random(), a = 0; for (const o of l) { a += o.p; if (r <= a) return pick(o.w); } return pick(l[l.length - 1].w); }
+      });
+      render();
+    }
+  };
+})();
+
+/* ===================== RESUMEN ===================== */
+const SUMQ = [
+  { q: 'Un filtro de correo aprende a detectar spam con miles de mensajes marcados como «spam» o «no spam». ¿Qué tipo de aprendizaje es?', o: ['Supervisado', 'No supervisado', 'Por refuerzo'], a: 0, why: 'Cada mensaje tiene una etiqueta, así que es supervisado.', hint: 'Fijate si los ejemplos vienen con su respuesta.' },
+  { q: 'Un robot aspiradora aprende la mejor ruta: gana puntos por limpiar y pierde puntos al chocar. ¿Qué tipo es?', o: ['Supervisado', 'No supervisado', 'Por refuerzo'], a: 2, why: 'Aprende por premios y castigos, es refuerzo.', hint: 'Hay puntos que gana y pierde.' },
+  { q: 'Una tienda agrupa a sus clientes por hábitos de compra, sin categorías previas. ¿Qué tipo es?', o: ['Supervisado', 'No supervisado', 'Por refuerzo'], a: 1, why: 'No hay etiquetas: agrupa por parecido.', hint: 'Nadie le dijo cuáles eran los grupos.' },
+  { q: 'Entrenás en Teachable Machine con las clases «Plástico» y «Papel». ¿Qué tipo es?', o: ['Supervisado', 'No supervisado', 'Por refuerzo'], a: 0, why: 'Las clases son las etiquetas de cada foto.', hint: 'Cada foto tiene una clase puesta por vos.' },
+  { q: 'Un programa aprende a ganar un videojuego jugando miles de partidas y sumando puntos. ¿Qué tipo es?', o: ['Supervisado', 'No supervisado', 'Por refuerzo'], a: 2, why: 'Aprende de la recompensa de sus propias acciones.', hint: 'Juega, prueba y recibe puntos.' }
+];
+function renderSummary() {
+  const rows = [
+    ['Supervisado', 'Ejemplos con etiqueta', 'A predecir la etiqueta de ejemplos nuevos', 'Detectar spam, Teachable Machine'],
+    ['No supervisado', 'Ejemplos sin etiqueta', 'A encontrar grupos y patrones por sí sola', 'Agrupar clientes o canciones parecidas'],
+    ['Por refuerzo', 'Premios y castigos por sus acciones', 'A elegir acciones que dan más premio', 'Robots, juegos, aspiradoras'],
+    ['Red neuronal', 'Datos que pasan por muchas neuronas', 'Los pesos de cada conexión', 'Reconocer caras, voces e imágenes'],
+    ['Modelo de lenguaje', 'Muchísimos textos', 'Qué palabra suele venir después', 'Chats de IA, teclado predictivo']
+  ];
+  $('#app').innerHTML = '<section class="lab"><div class="lab-head"><span class="chip">Resumen</span><h1>Lo que aprendimos</h1></div>' +
+    '<div class="panel"><span class="eyebrow">Tu progreso</span><div class="prog">' + LABS.map(l => '<div class="' + (isDone(l.id) ? 'done' : '') + '">' + (isDone(l.id) ? '✔ ' : '○ ') + esc(l.tag) + '</div>').join('') + '</div>' +
+    '<p style="font-size:15px;color:var(--muted)">Una actividad se completa al lograr su objetivo y responder bien sus preguntas.</p></div>' +
+    '<div class="panel"><span class="eyebrow">Cuadro comparativo</span><div class="cmp"><table class="cmp-t"><tr><th>Tipo</th><th>Qué recibe</th><th>Qué aprende</th><th>Ejemplo</th></tr>' +
+    rows.map(r => '<tr><td><b>' + r[0] + '</b></td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] + '</td></tr>').join('') + '</table></div></div>' +
+    '<div class="panel"><span class="eyebrow">Ideas clave</span><div class="words" style="display:grid;gap:8px"><span>Una IA aprende de <b>datos</b>: si los datos son malos o poco variados, el modelo falla.</span><span>El modelo se evalúa con ejemplos que <b>no</b> usó para aprender.</span><span>La máquina encuentra patrones, pero las <b>personas</b> deciden los datos, los premios y cómo usar el resultado.</span><span>Un modelo puede sonar muy seguro y estar equivocado: hay que revisar.</span></div></div>' +
+    '<div class="panel"><span class="eyebrow">Desafío final: ¿qué tipo de aprendizaje es?</span><div id="quiz" style="display:grid;gap:14px">' + quizHtml('sum') + '</div></div>' +
+    '<div class="actions"><button class="btn small ghost" id="clear">Borrar mi progreso</button></div>' + navButtons() + '</section>';
+  const c = $('#clear'); if (c) c.addEventListener('click', () => { S.goal = {}; S.quiz = {}; save(); go('sup'); toast('Se borró el progreso.'); });
+}
+
+/* ===== Arranque ===== */
+load();
+if (!ALL.includes(S.lab)) S.lab = 'sup';
+go(S.lab);
+</script>
